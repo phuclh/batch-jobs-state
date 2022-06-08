@@ -9,19 +9,19 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Phuclh\BatchJobsState\JobBatchState;
+use Phuclh\BatchJobsState\BatchState;
 
 class MarkAsFullyDispatchedJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
     public function __construct(
-        private JobBatchState $jobBatchState
+        private BatchState $batchState
     ) {
     }
 
     public function handle()
     {
-        $this->jobBatchState->update(['all_jobs_added_to_batch_at' => now()]);
+        $this->batchState->update(['all_jobs_added_to_batch_at' => now()]);
     }
 }

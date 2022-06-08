@@ -49,6 +49,19 @@ Optionally, you can publish the views using
 php artisan vendor:publish --tag="batch-jobs-state-views"
 ```
 
+Progress bar component
+
+Config Tailwind CSS for the progress bar component in `tailwind.config.js`:
+
+```bash
+module.exports = {
+    content: [
+        ...
+        './vendor/phuclh/batch-jobs-state/resources/views/**/*.blade.php',
+    ]
+};
+```
+
 ## Usage
 
 ```php

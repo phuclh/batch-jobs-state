@@ -13,18 +13,20 @@ trait HasBatchStates
 {
     protected ?Batch $cachedBatch = null;
 
-    protected ?JobBatchState $currentBatchState = null;
+    protected ?BatchState $currentBatchState = null;
 
     protected ?string $taskId = null;
 
+    protected ?\Closure $onJobBatchFinallyCallback = null;
+
     public function batchStates(): MorphMany
     {
-        return $this->morphMany(JobBatchState::class, 'model');
+        return $this->morphMany(BatchState::class, 'model');
     }
 
     public function latestBatchState(): MorphOne
     {
-        return $this->morphOne(JobBatchState::class, 'model')->latestOfMany();
+        return $this->morphOne(BatchState::class, 'model')->latestOfMany();
     }
 
     public function getBatchName(): string
@@ -32,7 +34,7 @@ trait HasBatchStates
         return get_class($this) . ' - ID: ' . $this->getKey();
     }
 
-    public function taskId(?string $taskId): self
+    public function taskId(string $taskId): self
     {
         $this->taskId = $taskId;
 
@@ -43,8 +45,17 @@ trait HasBatchStates
         return $this;
     }
 
-    public function newBatch(?string $name = null, bool $allowFailures = true, ?string $queue = null): self
+    public function onJobBatchFinally(\Closure $callback): self
     {
+        $this->onJobBatchFinallyCallback = $callback;
+
+        return $this;
+    }
+
+    public function newBatch(?string $name = null, bool $allowFailures = true, ?string $queue = null, ?string $taskId = null): self
+    {
+        $taskId && $this->taskId = $taskId;
+
         $this->currentBatchState = $this->createBatchState();
 
         $bus = Bus::batch([])
@@ -65,7 +76,7 @@ trait HasBatchStates
 
     public function addJobs(\Closure $callback): Batch
     {
-        $callback($this->cachedBatch);
+        $callback($this->cachedBatch, $this->currentBatchState);
 
         $this->cachedBatch->add([
             new MarkAsFullyDispatchedJob($this->currentBatchState)
@@ -74,7 +85,7 @@ trait HasBatchStates
         return $this->cachedBatch;
     }
 
-    public function createBatchState(?Batch $bus = null): JobBatchState
+    public function createBatchState(?Batch $bus = null): BatchState
     {
         return $this->batchStates()->create([
             'task_id' => $this->taskId,
@@ -84,34 +95,19 @@ trait HasBatchStates
         ]);
     }
 
-    public function findBatch(): ?Batch
+    public function findBatchState(?string $taskId = null): ?BatchState
     {
-        // Cache the batch.
-        if ($this->cachedBatch) {
-            return $this->cachedBatch;
-        }
-
-        /** @var JobBatchState $batchState */
-        $batchState = $this->batchState;
-
-        if (!$batchState) {
-            return null;
-        }
-
-        $this->cachedBatch = Bus::findBatch($batchState->batch_id);
-
-        return $this->cachedBatch;
+        return $taskId
+            ? $this->latestBatchState()->where('task_id', $taskId)->latest()->first()
+            : $this->latestBatchState;
     }
 
-    public function onJobBatchFinally(): void
-    {
-        //
-    }
-
-    protected function markBatchStateAsProcessed(JobBatchState $batchState): void
+    protected function markBatchStateAsProcessed(BatchState $batchState): void
     {
         $batchState->update(['status' => BatchStateStatus::PROCESSED]);
 
-        $this->onJobBatchFinally();
+        if (is_callable($this->onJobBatchFinallyCallback)) {
+            ($this->onJobBatchFinallyCallback)($this->cachedBatch, $batchState);
+        }
     }
 }
