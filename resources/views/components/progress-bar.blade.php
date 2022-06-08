@@ -1,7 +1,13 @@
 @props([
     'name' => null,
-    'percent' => 0
+    'percent' => 0,
+    'batchState' => null
 ])
+
+@php
+    $name = $name ?? $batchState?->name();
+    $percent = $percent ?? $batchState?->progress();
+@endphp
 
 <div class="flex justify-between mb-1">
     @if ($name)
