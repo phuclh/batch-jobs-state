@@ -11,7 +11,7 @@ class JobBatchState extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'status' => BatchStateStatus::class
+        'status' => BatchStateStatus::class,
     ];
 
     public function model(): MorphTo

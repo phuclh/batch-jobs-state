@@ -50,9 +50,9 @@ trait HasBatchStates
         $bus = Bus::batch([])
             ->name($name ?? $this->getBatchName())
             ->allowFailures($allowFailures)
-            ->finally(fn() => $this->markBatchStateAsProcessed($this->currentBatchState));
+            ->finally(fn () => $this->markBatchStateAsProcessed($this->currentBatchState));
 
-        if (!is_null($queue)) {
+        if (! is_null($queue)) {
             $bus->onQueue($queue);
         }
 
@@ -68,7 +68,7 @@ trait HasBatchStates
         $callback($this->cachedBatch);
 
         $this->cachedBatch->add([
-            new MarkAsFullyDispatchedJob($this->currentBatchState)
+            new MarkAsFullyDispatchedJob($this->currentBatchState),
         ]);
 
         return $this->cachedBatch;
@@ -94,7 +94,7 @@ trait HasBatchStates
         /** @var JobBatchState $batchState */
         $batchState = $this->batchState;
 
-        if (!$batchState) {
+        if (! $batchState) {
             return null;
         }
 
