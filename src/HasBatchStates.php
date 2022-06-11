@@ -37,15 +37,15 @@ trait HasBatchStates
     public function latestProcessingBatchState(): MorphOne
     {
         return $this->morphOne(BatchState::class, 'model')->ofMany([
-            'id' => 'max'
-        ], fn($query) => $query->where('status', BatchStateStatus::PROCESSING));
+            'id' => 'max',
+        ], fn ($query) => $query->where('status', BatchStateStatus::PROCESSING));
     }
 
     public function oldestProcessingBatchState(): MorphOne
     {
         return $this->morphOne(BatchState::class, 'model')->ofMany([
-            'id' => 'min'
-        ], fn($query) => $query->where('status', BatchStateStatus::PROCESSING));
+            'id' => 'min',
+        ], fn ($query) => $query->where('status', BatchStateStatus::PROCESSING));
     }
 
     public function getBatchName(): string
@@ -73,10 +73,10 @@ trait HasBatchStates
         $bus = Bus::batch([])
             ->name($name ?? $this->getBatchName())
             ->allowFailures($allowFailures)
-            ->catch(fn(Batch $batch, Throwable $e) => $this->runOnJobBatchFailedCallback($this->currentBatchState, $onJobBatchFailedCallback))
-            ->finally(fn() => $this->markBatchStateAsProcessed($this->currentBatchState, $onJobBatchFinallyCallback));
+            ->catch(fn (Batch $batch, Throwable $e) => $this->runOnJobBatchFailedCallback($this->currentBatchState, $onJobBatchFailedCallback))
+            ->finally(fn () => $this->markBatchStateAsProcessed($this->currentBatchState, $onJobBatchFinallyCallback));
 
-        if (!is_null($queue)) {
+        if (! is_null($queue)) {
             $bus->onQueue($queue);
         }
 
@@ -114,8 +114,8 @@ trait HasBatchStates
         $batchState = $taskId
             ? $this->batchStates()
                 ->where('task_id', $taskId)
-                ->when($latest, fn(Builder $query) => $query->latest())
-                ->when(!$latest, fn(Builder $query) => $query->oldest())
+                ->when($latest, fn (Builder $query) => $query->latest())
+                ->when(! $latest, fn (Builder $query) => $query->oldest())
                 ->first()
             : ($latest ? $this->latestBatchState : $this->oldestBatchState);
 
@@ -128,8 +128,8 @@ trait HasBatchStates
         $batchState = $taskId
             ? $this->batchStates()
                 ->where('task_id', $taskId)
-                ->when($latest, fn(Builder $query) => $query->latest())
-                ->when(!$latest, fn(Builder $query) => $query->oldest())
+                ->when($latest, fn (Builder $query) => $query->latest())
+                ->when(! $latest, fn (Builder $query) => $query->oldest())
                 ->first()
             : ($latest ? $this->latestProcessingBatchState : $this->oldestProcessingBatchState);
 
