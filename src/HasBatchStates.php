@@ -59,9 +59,9 @@ trait HasBatchStates
         $bus = Bus::batch([])
             ->name($name ?? $this->getBatchName())
             ->allowFailures($allowFailures)
-            ->finally(fn() => $this->markBatchStateAsProcessed($this->currentBatchState, $onJobBatchFinallyCallback));
+            ->finally(fn () => $this->markBatchStateAsProcessed($this->currentBatchState, $onJobBatchFinallyCallback));
 
-        if (!is_null($queue)) {
+        if (! is_null($queue)) {
             $bus->onQueue($queue);
         }
 
