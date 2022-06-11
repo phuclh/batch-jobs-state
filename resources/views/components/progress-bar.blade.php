@@ -1,6 +1,6 @@
 @props([
     'name' => null,
-    'percent' => 0,
+    'percent' => null,
     'batchState' => null
 ])
 

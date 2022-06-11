@@ -17,8 +17,6 @@ trait HasBatchStates
 
     protected ?string $taskId = null;
 
-    protected ?\Closure $onJobBatchFinallyCallback = null;
-
     public function batchStates(): MorphMany
     {
         return $this->morphMany(BatchState::class, 'model');
@@ -27,6 +25,13 @@ trait HasBatchStates
     public function latestBatchState(): MorphOne
     {
         return $this->morphOne(BatchState::class, 'model')->latestOfMany();
+    }
+
+    public function latestProcessingBatchState(): MorphOne
+    {
+        return $this->morphOne(BatchState::class, 'model')
+            ->where('status', BatchStateStatus::PROCESSING)
+            ->latestOfMany();
     }
 
     public function getBatchName(): string
@@ -45,14 +50,7 @@ trait HasBatchStates
         return $this;
     }
 
-    public function onJobBatchFinally(\Closure $callback): self
-    {
-        $this->onJobBatchFinallyCallback = $callback;
-
-        return $this;
-    }
-
-    public function newBatch(?string $name = null, bool $allowFailures = true, ?string $queue = null, ?string $taskId = null): self
+    public function newBatch(?string $name = null, bool $allowFailures = true, ?string $queue = null, ?string $taskId = null, ?\Closure $onJobBatchFinallyCallback = null): self
     {
         $taskId && $this->taskId = $taskId;
 
@@ -61,9 +59,9 @@ trait HasBatchStates
         $bus = Bus::batch([])
             ->name($name ?? $this->getBatchName())
             ->allowFailures($allowFailures)
-            ->finally(fn () => $this->markBatchStateAsProcessed($this->currentBatchState));
+            ->finally(fn() => $this->markBatchStateAsProcessed($this->currentBatchState, $onJobBatchFinallyCallback));
 
-        if (! is_null($queue)) {
+        if (!is_null($queue)) {
             $bus->onQueue($queue);
         }
 
@@ -97,17 +95,37 @@ trait HasBatchStates
 
     public function findBatchState(?string $taskId = null): ?BatchState
     {
-        return $taskId
-            ? $this->latestBatchState()->where('task_id', $taskId)->latest()->first()
+        /** @var ?BatchState $batchState */
+        $batchState = $taskId
+            ? $this->latestBatchState()
+                ->where('task_id', $taskId)
+                ->latest()
+                ->first()
             : $this->latestBatchState;
+
+        return $batchState;
     }
 
-    protected function markBatchStateAsProcessed(BatchState $batchState): void
+    public function findProcessingBatchState(?string $taskId = null): ?BatchState
+    {
+        /** @var ?BatchState $batchState */
+        $batchState = $taskId
+            ? $this->latestBatchState()
+                ->where('task_id', $taskId)
+                ->where('status', BatchStateStatus::PROCESSING)
+                ->latest()
+                ->first()
+            : $this->latestProcessingBatchState;
+
+        return $batchState;
+    }
+
+    protected function markBatchStateAsProcessed(BatchState $batchState, ?\Closure $onJobBatchFinallyCallback = null): void
     {
         $batchState->update(['status' => BatchStateStatus::PROCESSED]);
 
-        if (is_callable($this->onJobBatchFinallyCallback)) {
-            ($this->onJobBatchFinallyCallback)($this->cachedBatch, $batchState);
+        if (is_callable($onJobBatchFinallyCallback)) {
+            $onJobBatchFinallyCallback($this->cachedBatch, $batchState);
         }
     }
 }
