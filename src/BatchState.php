@@ -31,6 +31,10 @@ class BatchState extends Model
             return $this->cachedBatch;
         }
 
+        if (!$this->batch_id) {
+            return null;
+        }
+
         $this->cachedBatch = Bus::findBatch($this->batch_id);
 
         return $this->cachedBatch;
