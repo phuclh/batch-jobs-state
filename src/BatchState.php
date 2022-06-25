@@ -31,7 +31,7 @@ class BatchState extends Model
             return $this->cachedBatch;
         }
 
-        if (!$this->batch_id) {
+        if (! $this->batch_id) {
             return null;
         }
 
