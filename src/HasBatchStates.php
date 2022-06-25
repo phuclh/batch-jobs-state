@@ -147,8 +147,6 @@ trait HasBatchStates
 
     protected function runOnJobBatchFailedCallback(BatchState $batchState, ?\Closure $onJobBatchFailedCallback): void
     {
-        $batchState->update(['status' => BatchStateStatus::FAILED]);
-
         if (is_callable($onJobBatchFailedCallback)) {
             $onJobBatchFailedCallback($this->cachedBatch, $batchState);
         }
